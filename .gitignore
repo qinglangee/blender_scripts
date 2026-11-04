@@ -1,0 +1,50 @@
+# Blender backup files
+*.blend1
+*.blend2
+*.blend@*
+
+# Blender temporary and autosave files
+*.blend_temp
+*.blend.autosave
+*.blend.lock
+
+# Blender cache and simulation data
+.blender_cache/
+cache/
+physics_cache/
+fluid_cache/
+smoke_cache/
+cloth_cache/
+particles_cache/
+
+# Render output (adjust if renders should be versioned)
+render/
+renders/
+*.exr
+*.mov
+*.mp4
+*.avi
+
+# Preview and thumbnail files
+*.png~
+*.jpg~
+*.jpeg~
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python bytecode and local environments
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# zhch
+*.png
