@@ -10,6 +10,10 @@ PLANE_NAME = "EyeSequence_Plane"
 ARMATURE_NAME = "EyeSequence_Controller"
 BONE_NAME = "Offset_Control"
 CONTROLLER_X = 1.8
+TICK_X = 2.35
+TICK_HALF_WIDTH = 0.28
+TICK_SPACING = 0.1
+TICK_Y = 0.0
 OUTPUT_BLEND = Path(__file__).resolve().parent / "eye_sequence_driver.blend"
 
 
@@ -104,6 +108,69 @@ def create_controller(frame_count):
     limit.max_y = (frame_count - 1) / 10.0
     limit.owner_space = "LOCAL"
     limit.use_transform_limit = True
+
+    # Front-view triangle pointer in the XZ plane. Its right-facing tip is
+    # exactly at the bone origin, making the indicated ruler value unambiguous.
+    shape_mesh = bpy.data.meshes.new("Offset_Control_Shape_Mesh")
+    shape_vertices = [
+        (-0.38, 0.0, -0.18), (-0.38, 0.0, 0.18), (0.0, 0.0, 0.0),
+    ]
+    shape_mesh.from_pydata(shape_vertices, [], [(0, 1, 2)])
+    shape_mesh.update()
+    control_shape = bpy.data.objects.new("Offset_Control_Shape", shape_mesh)
+    bpy.context.collection.objects.link(control_shape)
+    control_shape.hide_render = True
+    control_shape.hide_select = True
+    control_shape.display_type = "WIRE"
+    pose_bone.custom_shape = control_shape
+    pose_bone.custom_shape_scale_xyz = (1.0, 1.0, 1.0)
+
+    # Ruler runs along world/local Y, the same direction as the bone motion.
+    # Tick i is at Y=i/10, exactly matching driver offset i.
+    y_min = 0.0
+    y_max = (frame_count - 1) / 10.0
+    vertices = []
+    edges = []
+
+    def add_segment(a, b):
+        start = len(vertices)
+        vertices.extend((a, b))
+        edges.append((start, start + 1))
+
+    # Outer rectangular border and horizontal ticks, visible in front view.
+    x_left, x_right = TICK_X - TICK_HALF_WIDTH, TICK_X + TICK_HALF_WIDTH
+    add_segment((x_left, TICK_Y - 0.06, -0.28), (x_right, TICK_Y - 0.06, -0.28))
+    add_segment((x_right, TICK_Y - 0.06, -0.28), (x_right, TICK_Y + y_max + 0.06, -0.28))
+    add_segment((x_right, TICK_Y + y_max + 0.06, -0.28), (x_left, TICK_Y + y_max + 0.06, -0.28))
+    add_segment((x_left, TICK_Y + y_max + 0.06, -0.28), (x_left, TICK_Y - 0.06, -0.28))
+    for i in range(frame_count):
+        y = TICK_Y + i * TICK_SPACING
+        add_segment((x_left, y, -0.28), (x_left + TICK_HALF_WIDTH * 0.72, y, -0.28))
+
+    ruler_mesh = bpy.data.meshes.new("Frame_Ruler_Mesh")
+    ruler_mesh.from_pydata(vertices, edges, [])
+    ruler_mesh.update()
+    ruler = bpy.data.objects.new("Frame_Ruler", ruler_mesh)
+    bpy.context.collection.objects.link(ruler)
+    ruler.hide_render = True
+    ruler.hide_select = True
+    ruler.display_type = "WIRE"
+    ruler.show_in_front = True
+
+    # Labels lie in the XZ plane so they face the front view like the plane.
+    for i in range(frame_count):
+        y = TICK_Y + i * TICK_SPACING
+        text_data = bpy.data.curves.new(f"Frame_{i + 1:02d}_Text", type="FONT")
+        text_data.body = str(i + 1)
+        text_data.size = 0.075
+        text_data.align_x = "LEFT"
+        label = bpy.data.objects.new(f"Frame_{i + 1:02d}", text_data)
+        bpy.context.collection.objects.link(label)
+        label.location = (x_left + TICK_HALF_WIDTH * 0.76, y, -0.035)
+        label.rotation_euler[0] = 1.5707963267948966
+        label.hide_render = True
+        label.hide_select = True
+        label.show_in_front = True
     return armature
 
 
