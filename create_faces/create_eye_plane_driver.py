@@ -72,7 +72,7 @@ def create_plane(image, frame_count):
     return plane, texture
 
 
-def create_controller():
+def create_controller(frame_count):
     arm_data = bpy.data.armatures.new(ARMATURE_NAME)
     armature = bpy.data.objects.new(ARMATURE_NAME, arm_data)
     bpy.context.collection.objects.link(armature)
@@ -84,12 +84,32 @@ def create_controller():
     bone.head = (CONTROLLER_X, 0.0, -0.5)
     bone.tail = (CONTROLLER_X, 0.0, 0.5)
     bpy.ops.object.mode_set(mode="OBJECT")
+
+    # Lock unused transforms and constrain the pose bone's local Y movement.
+    # Unlike IK limits, LIMIT_LOCATION also clamps direct manual transforms.
+    pose_bone = armature.pose.bones[BONE_NAME]
+    pose_bone.lock_location = (True, False, True)
+    pose_bone.lock_rotation = (True, True, True)
+    pose_bone.lock_scale = (True, True, True)
+    limit = pose_bone.constraints.new(type="LIMIT_LOCATION")
+    limit.name = "Limit Sequence Offset Range"
+    limit.use_min_x = limit.use_max_x = True
+    limit.use_min_y = limit.use_max_y = False
+    limit.use_min_z = limit.use_max_z = True
+    limit.min_x = limit.max_x = 0.0
+    limit.min_z = limit.max_z = 0.0
+    limit.use_min_y = True
+    limit.use_max_y = True
+    limit.min_y = 0.0
+    limit.max_y = (frame_count - 1) / 10.0
+    limit.owner_space = "LOCAL"
+    limit.use_transform_limit = True
     return armature
 
 
 def add_offset_driver(texture_node, armature):
     # Offset is an integer image-user property. Bone Y movement times ten
-    # provides a convenient control range; round to whole image frames.
+    # provides a convenient control range; int() truncates to whole frames.
     fcurve = texture_node.image_user.driver_add("frame_offset")
     driver = fcurve.driver
     driver.type = "SCRIPTED"
@@ -101,7 +121,7 @@ def add_offset_driver(texture_node, armature):
     target.bone_target = BONE_NAME
     target.transform_type = "LOC_Y"
     target.transform_space = "LOCAL_SPACE"
-    driver.expression = "round(bone_y * 10)"
+    driver.expression = "int(bone_y * 10)"
 
 
 def main():
@@ -112,7 +132,7 @@ def main():
     files = image_files()
     image = make_sequence_image(files)
     plane, texture_node = create_plane(image, len(files))
-    armature = create_controller()
+    armature = create_controller(len(files))
     add_offset_driver(texture_node, armature)
     bpy.context.view_layer.objects.active = plane
     plane.select_set(True)
