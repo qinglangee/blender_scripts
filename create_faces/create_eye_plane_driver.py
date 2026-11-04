@@ -9,6 +9,7 @@ FILE_PREFIX = "eye_"
 PLANE_NAME = "EyeSequence_Plane"
 ARMATURE_NAME = "EyeSequence_Controller"
 BONE_NAME = "Offset_Control"
+CONTROLLER_X = 1.8
 OUTPUT_BLEND = Path(__file__).resolve().parent / "eye_sequence_driver.blend"
 
 
@@ -37,6 +38,9 @@ def create_plane(image, frame_count):
     bpy.ops.mesh.primitive_plane_add(size=2.0, location=(0.0, 0.0, 0.0))
     plane = bpy.context.object
     plane.name = PLANE_NAME
+    # A Blender plane lies in local XY with its normal along local +Z.
+    # Rotate it so its front faces the front orthographic view (-Y).
+    plane.rotation_euler[0] = 1.5707963267948966
 
     material = bpy.data.materials.new("EyeSequence_Material")
     material.use_nodes = True
@@ -76,8 +80,9 @@ def create_controller():
     armature.select_set(True)
     bpy.ops.object.mode_set(mode="EDIT")
     bone = arm_data.edit_bones.new(BONE_NAME)
-    bone.head = (0.0, 0.0, 0.0)
-    bone.tail = (0.0, 0.0, 1.0)
+    # Place the single vertical control bone to the right of the plane.
+    bone.head = (CONTROLLER_X, 0.0, -0.5)
+    bone.tail = (CONTROLLER_X, 0.0, 0.5)
     bpy.ops.object.mode_set(mode="OBJECT")
     return armature
 
@@ -100,6 +105,10 @@ def add_offset_driver(texture_node, armature):
 
 
 def main():
+    # Remove the default cube (and any other default scene objects) so the
+    # generated project contains only the plane and its controller.
+    bpy.ops.object.select_all(action="SELECT")
+    bpy.ops.object.delete(use_global=False)
     files = image_files()
     image = make_sequence_image(files)
     plane, texture_node = create_plane(image, len(files))
