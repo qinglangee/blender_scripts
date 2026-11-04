@@ -109,8 +109,8 @@ def create_controller(frame_count):
     limit.owner_space = "LOCAL"
     limit.use_transform_limit = True
 
-    # Front-view triangle pointer in the XZ plane. Its right-facing tip is
-    # exactly at the bone origin, making the indicated ruler value unambiguous.
+    # Front-view triangle in the XZ plane, with its right-facing tip at the
+    # bone origin. The bone's local Y movement maps to world Z.
     shape_mesh = bpy.data.meshes.new("Offset_Control_Shape_Mesh")
     shape_vertices = [
         (-0.38, 0.0, -0.18), (-0.38, 0.0, 0.18), (0.0, 0.0, 0.0),
@@ -125,10 +125,10 @@ def create_controller(frame_count):
     pose_bone.custom_shape = control_shape
     pose_bone.custom_shape_scale_xyz = (1.0, 1.0, 1.0)
 
-    # Ruler runs along world/local Y, the same direction as the bone motion.
-    # Tick i is at Y=i/10, exactly matching driver offset i.
-    y_min = 0.0
-    y_max = (frame_count - 1) / 10.0
+    # Bone local Y maps to world Z. Align the zero tick with the bone origin
+    # at world Z=0, then place each successive frame 0.1 units above it.
+    z_min = 0.0
+    z_max = (frame_count - 1) / 10.0
     vertices = []
     edges = []
 
@@ -137,15 +137,16 @@ def create_controller(frame_count):
         vertices.extend((a, b))
         edges.append((start, start + 1))
 
-    # Outer rectangular border and horizontal ticks, visible in front view.
+    # Outer rectangular border and horizontal ticks in the front-facing XZ
+    # plane (normal toward world -Y).
     x_left, x_right = TICK_X - TICK_HALF_WIDTH, TICK_X + TICK_HALF_WIDTH
-    add_segment((x_left, TICK_Y - 0.06, -0.28), (x_right, TICK_Y - 0.06, -0.28))
-    add_segment((x_right, TICK_Y - 0.06, -0.28), (x_right, TICK_Y + y_max + 0.06, -0.28))
-    add_segment((x_right, TICK_Y + y_max + 0.06, -0.28), (x_left, TICK_Y + y_max + 0.06, -0.28))
-    add_segment((x_left, TICK_Y + y_max + 0.06, -0.28), (x_left, TICK_Y - 0.06, -0.28))
+    add_segment((x_left, TICK_Y, z_min - 0.06), (x_right, TICK_Y, z_min - 0.06))
+    add_segment((x_right, TICK_Y, z_min - 0.06), (x_right, TICK_Y, z_max + 0.06))
+    add_segment((x_right, TICK_Y, z_max + 0.06), (x_left, TICK_Y, z_max + 0.06))
+    add_segment((x_left, TICK_Y, z_max + 0.06), (x_left, TICK_Y, z_min - 0.06))
     for i in range(frame_count):
-        y = TICK_Y + i * TICK_SPACING
-        add_segment((x_left, y, -0.28), (x_left + TICK_HALF_WIDTH * 0.72, y, -0.28))
+        z = z_min + i * TICK_SPACING
+        add_segment((x_left, TICK_Y, z), (x_left + TICK_HALF_WIDTH * 0.72, TICK_Y, z))
 
     ruler_mesh = bpy.data.meshes.new("Frame_Ruler_Mesh")
     ruler_mesh.from_pydata(vertices, edges, [])
@@ -159,14 +160,14 @@ def create_controller(frame_count):
 
     # Labels lie in the XZ plane so they face the front view like the plane.
     for i in range(frame_count):
-        y = TICK_Y + i * TICK_SPACING
+        z = z_min + i * TICK_SPACING
         text_data = bpy.data.curves.new(f"Frame_{i + 1:02d}_Text", type="FONT")
         text_data.body = str(i + 1)
         text_data.size = 0.075
         text_data.align_x = "LEFT"
         label = bpy.data.objects.new(f"Frame_{i + 1:02d}", text_data)
         bpy.context.collection.objects.link(label)
-        label.location = (x_left + TICK_HALF_WIDTH * 0.76, y, -0.035)
+        label.location = (x_left + TICK_HALF_WIDTH * 0.76, TICK_Y, z - 0.035)
         label.rotation_euler[0] = 1.5707963267948966
         label.hide_render = True
         label.hide_select = True
