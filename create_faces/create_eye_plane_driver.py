@@ -9,12 +9,25 @@ FILE_PREFIX = "eye_"
 PLANE_NAME = "EyeSequence_Plane"
 ARMATURE_NAME = "EyeSequence_Controller"
 BONE_NAME = "Offset_Control"
+COLLECTION_NAME = "Expression"
 CONTROLLER_X = 1.8
 TICK_X = 2.35
 TICK_HALF_WIDTH = 0.28
 TICK_SPACING = 0.1
 TICK_Y = 0.0
 OUTPUT_BLEND = Path(__file__).resolve().parent / "eye_sequence_driver.blend"
+
+
+def create_expression_collection():
+    collection = bpy.data.collections.new(COLLECTION_NAME)
+    bpy.context.scene.collection.children.link(collection)
+    return collection
+
+
+def move_to_collection(obj, collection):
+    for existing_collection in tuple(obj.users_collection):
+        existing_collection.objects.unlink(obj)
+    collection.objects.link(obj)
 
 
 def image_files():
@@ -38,10 +51,11 @@ def make_sequence_image(files):
     return image
 
 
-def create_plane(image, frame_count):
+def create_plane(image, frame_count, collection):
     bpy.ops.mesh.primitive_plane_add(size=2.0, location=(0.0, 0.0, 0.0))
     plane = bpy.context.object
     plane.name = PLANE_NAME
+    move_to_collection(plane, collection)
     # A Blender plane lies in local XY with its normal along local +Z.
     # Rotate it so its front faces the front orthographic view (-Y).
     plane.rotation_euler[0] = 1.5707963267948966
@@ -76,10 +90,11 @@ def create_plane(image, frame_count):
     return plane, texture
 
 
-def create_controller(frame_count):
+def create_controller(frame_count, collection):
     arm_data = bpy.data.armatures.new(ARMATURE_NAME)
     armature = bpy.data.objects.new(ARMATURE_NAME, arm_data)
     bpy.context.collection.objects.link(armature)
+    move_to_collection(armature, collection)
     bpy.context.view_layer.objects.active = armature
     armature.select_set(True)
     bpy.ops.object.mode_set(mode="EDIT")
@@ -118,6 +133,7 @@ def create_controller(frame_count):
     shape_mesh.update()
     control_shape = bpy.data.objects.new("Offset_Control_Shape", shape_mesh)
     bpy.context.collection.objects.link(control_shape)
+    move_to_collection(control_shape, collection)
     control_shape.hide_render = True
     control_shape.hide_select = True
     control_shape.display_type = "SOLID"
@@ -163,6 +179,7 @@ def create_controller(frame_count):
     ruler_mesh.update()
     ruler = bpy.data.objects.new("Frame_Ruler", ruler_mesh)
     bpy.context.collection.objects.link(ruler)
+    move_to_collection(ruler, collection)
     # The object origin is the frame's geometric center; mesh vertices above
     # are stored relative to it, preserving the intended world placement.
     ruler.location = ruler_center
@@ -180,6 +197,7 @@ def create_controller(frame_count):
         text_data.align_x = "LEFT"
         label = bpy.data.objects.new(f"Frame_{i + 1:02d}", text_data)
         bpy.context.collection.objects.link(label)
+        move_to_collection(label, collection)
         label.location = (x_left + TICK_HALF_WIDTH * 0.76, TICK_Y, z - 0.035)
         label.rotation_euler[0] = 1.5707963267948966
         label.hide_render = True
@@ -225,9 +243,10 @@ def main():
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete(use_global=False)
     files = image_files()
+    expression_collection = create_expression_collection()
     image = make_sequence_image(files)
-    plane, texture_node = create_plane(image, len(files))
-    armature = create_controller(len(files))
+    plane, texture_node = create_plane(image, len(files), expression_collection)
+    armature = create_controller(len(files), expression_collection)
     add_offset_driver(texture_node, armature)
     bpy.context.view_layer.objects.active = plane
     plane.select_set(True)
