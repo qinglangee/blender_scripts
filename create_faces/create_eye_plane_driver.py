@@ -205,12 +205,16 @@ def create_controller(frame_count, collection):
         label.show_in_front = True
         ruler_children.append(label)
 
-    # The ruler border is the parent of every ruler component. Preserve their
-    # world transforms while establishing the hierarchy.
+    # Equivalent to Blender's Object (Keep Transform) parenting. Store the
+    # parent's inverse world matrix so the child's existing transform remains
+    # in the same world-space position after parenting.
+    bpy.context.view_layer.update()
+    ruler_world_inverse = ruler.matrix_world.inverted()
     for child in ruler_children:
-        world_location = child.location.copy()
+        child_basis = child.matrix_basis.copy()
         child.parent = ruler
-        child.location = world_location - ruler.location
+        child.matrix_parent_inverse = ruler_world_inverse
+        child.matrix_basis = child_basis
 
     # Parent the armature and complete ruler group to the image plane, keeping
     # their current world placement. This lets the full rig follow the plane.
