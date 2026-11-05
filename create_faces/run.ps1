@@ -1,1 +1,10 @@
-& "D:\software\blender-4.4.0-candidate\blender.exe" --background --python "D:\workspaces\codex\blender_scripts\create_faces\create_eye_plane_driver.py"
+param(
+    [Parameter(ValueFromRemainingArguments = $true)]
+    [string[]] $PythonArgs
+)
+
+$BlenderExe = "D:\software\blender-4.4.0-candidate\blender.exe"
+$PythonScript = Join-Path $PSScriptRoot "create_eye_plane_driver.py"
+
+& $BlenderExe --background --python $PythonScript -- @PythonArgs
+exit $LASTEXITCODE

@@ -1,11 +1,14 @@
 import bpy
+import argparse
 from pathlib import Path
+import sys
 
 # Create a plane using eye_*.png as an image sequence and drive the image
 # texture's Offset with the controller bone's local pose-mode Y translation.
 
-ASSET_DIR = Path(__file__).resolve().parent / "eye_mouth"
-FILE_PREFIX = "eye_"
+SCRIPT_DIR = Path(__file__).resolve().parent
+DEFAULT_ASSET_DIR = SCRIPT_DIR / "eye_mouth"
+DEFAULT_FILE_PREFIX = "eye_"
 PLANE_NAME = "EyeSequence_Plane"
 ARMATURE_NAME = "EyeSequence_Controller"
 BONE_NAME = "Offset_Control"
@@ -31,15 +34,36 @@ def move_to_collection(obj, collection):
     collection.objects.link(obj)
 
 
-def image_files():
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Create a Blender image-sequence plane and bone-driven frame controller."
+    )
+    parser.add_argument(
+        "--image-dir", "-d", type=Path, default=DEFAULT_ASSET_DIR,
+        help=f"Directory containing sequence images (default: {DEFAULT_ASSET_DIR})",
+    )
+    parser.add_argument(
+        "--prefix", "-p", default=DEFAULT_FILE_PREFIX,
+        help=f"Image filename prefix (default: {DEFAULT_FILE_PREFIX!r})",
+    )
+    parser.add_argument(
+        "--output", "-o", type=Path, default=OUTPUT_BLEND,
+        help=f"Output .blend path (default: {OUTPUT_BLEND})",
+    )
+    args_list = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
+    return parser.parse_args(args_list)
+
+
+def image_files(asset_dir, file_prefix):
+    asset_dir = asset_dir.expanduser().resolve()
     files = sorted(
-        (path for path in ASSET_DIR.iterdir()
-         if path.is_file() and path.name.lower().startswith(FILE_PREFIX)
+        (path for path in asset_dir.iterdir()
+         if path.is_file() and path.name.lower().startswith(file_prefix.lower())
          and path.suffix.lower() in {".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".exr"}),
         key=lambda p: p.name.lower(),
-    )
+    ) if asset_dir.is_dir() else []
     if not files:
-        raise RuntimeError(f"No {FILE_PREFIX} image files found in: {ASSET_DIR}")
+        raise RuntimeError(f"No {file_prefix!r} image files found in: {asset_dir}")
     return files
 
 
@@ -247,7 +271,8 @@ def main():
     # generated project contains only the plane and its controller.
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete(use_global=False)
-    files = image_files()
+    args = parse_args()
+    files = image_files(args.image_dir, args.prefix)
     expression_collection = create_expression_collection()
     image = make_sequence_image(files)
     plane, texture_node = create_plane(image, len(files), expression_collection)
@@ -263,9 +288,11 @@ def main():
             if area.type == "VIEW_3D":
                 area.spaces.active.shading.type = "MATERIAL"
 
-    bpy.ops.wm.save_as_mainfile(filepath=str(OUTPUT_BLEND))
+    output_path = args.output.expanduser().resolve()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    bpy.ops.wm.save_as_mainfile(filepath=str(output_path))
     print(f"Created {PLANE_NAME} with {len(files)} eye sequence frames and {ARMATURE_NAME}.")
-    print(f"Saved Blender file: {OUTPUT_BLEND}")
+    print(f"Saved Blender file: {output_path}")
 
 
 if __name__ == "__main__":
