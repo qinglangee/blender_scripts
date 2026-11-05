@@ -124,6 +124,7 @@ def create_controller(frame_count):
     control_shape.display_type = "WIRE"
     pose_bone.custom_shape = control_shape
     pose_bone.custom_shape_scale_xyz = (1.0, 1.0, 1.0)
+    ruler_children = []
 
     # Bone local Y maps to world Z. Align the zero tick with the bone origin
     # at world Z=0, then place each successive frame 0.1 units above it.
@@ -172,6 +173,19 @@ def create_controller(frame_count):
         label.hide_render = True
         label.hide_select = True
         label.show_in_front = True
+        ruler_children.append(label)
+
+    # The ruler border is the parent of every ruler component. Preserve their
+    # world transforms while establishing the hierarchy.
+    for child in ruler_children:
+        child.parent = ruler
+        child.matrix_parent_inverse = ruler.matrix_world.inverted()
+
+    # Parent the armature and complete ruler group to the image plane, keeping
+    # their current world placement. This lets the full rig follow the plane.
+    for child in (armature, ruler):
+        child.parent = bpy.data.objects.get(PLANE_NAME)
+        child.matrix_parent_inverse = child.parent.matrix_world.inverted()
     return armature
 
 
