@@ -121,7 +121,7 @@ def create_controller(frame_count, collection):
     limit.use_min_y = True
     limit.use_max_y = True
     limit.min_y = 0.0
-    limit.max_y = (frame_count - 1) / 10.0
+    limit.max_y = (frame_count - 1) / 10.0 + 0.01
     limit.owner_space = "LOCAL"
     limit.use_transform_limit = True
 
