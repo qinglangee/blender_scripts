@@ -114,13 +114,14 @@ def create_controller(frame_count):
     shape_vertices = [
         (-0.38, -0.18, 0.0), (-0.38, 0.18, 0.0), (0.0, 0.0, 0.0),
     ]
-    shape_mesh.from_pydata(shape_vertices, [], [(0, 1, 2)])
+    shape_mesh.from_pydata(shape_vertices, [], [(2, 1, 0)])
     shape_mesh.update()
     control_shape = bpy.data.objects.new("Offset_Control_Shape", shape_mesh)
     bpy.context.collection.objects.link(control_shape)
     control_shape.hide_render = True
     control_shape.hide_select = True
-    control_shape.display_type = "WIRE"
+    control_shape.display_type = "SOLID"
+    control_shape.color = (1.0, 0.25, 0.05, 0.1)
     pose_bone.custom_shape = control_shape
     pose_bone.custom_shape_scale_xyz = (1.0, 1.0, 1.0)
     ruler_children = []
