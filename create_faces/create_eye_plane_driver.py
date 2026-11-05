@@ -15,6 +15,7 @@ TICK_X = 2.35
 TICK_HALF_WIDTH = 0.28
 TICK_SPACING = 0.1
 TICK_Y = 0.0
+TICK_START_Z = -0.5  # Frame 1 aligns with the control bone head.
 OUTPUT_BLEND = Path(__file__).resolve().parent / "eye_sequence_driver.blend"
 
 
@@ -142,10 +143,10 @@ def create_controller(frame_count, collection):
     pose_bone.custom_shape_scale_xyz = (1.0, 1.0, 1.0)
     ruler_children = []
 
-    # Bone local Y maps to world Z. Align the zero tick with the bone origin
-    # at world Z=0, then place each successive frame 0.1 units above it.
-    z_min = 0.0
-    z_max = (frame_count - 1) / 10.0
+    # Bone local Y maps to world Z. Align frame 1 (offset 0) with the bone
+    # head at world Z=-0.5, then place each successive frame 0.1 units above.
+    z_min = TICK_START_Z
+    z_max = z_min + (frame_count - 1) * TICK_SPACING
     vertices = []
     edges = []
 
