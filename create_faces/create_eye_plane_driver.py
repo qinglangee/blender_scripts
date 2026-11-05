@@ -109,11 +109,10 @@ def create_controller(frame_count):
     limit.owner_space = "LOCAL"
     limit.use_transform_limit = True
 
-    # Front-view triangle in the XZ plane, with its right-facing tip at the
-    # bone origin. The bone's local Y movement maps to world Z.
+    # Triangle pointer with its tip at the bone origin.
     shape_mesh = bpy.data.meshes.new("Offset_Control_Shape_Mesh")
     shape_vertices = [
-        (-0.38, 0.0, -0.18), (-0.38, 0.0, 0.18), (0.0, 0.0, 0.0),
+        (-0.38, -0.18, 0.0), (-0.38, 0.18, 0.0), (0.0, 0.0, 0.0),
     ]
     shape_mesh.from_pydata(shape_vertices, [], [(0, 1, 2)])
     shape_mesh.update()
@@ -219,6 +218,13 @@ def main():
     bpy.context.view_layer.objects.active = plane
     plane.select_set(True)
     armature.select_set(False)
+
+    # Store Material Preview as the startup shading mode in 3D View areas.
+    for screen in bpy.data.screens:
+        for area in screen.areas:
+            if area.type == "VIEW_3D":
+                area.spaces.active.shading.type = "MATERIAL"
+
     bpy.ops.wm.save_as_mainfile(filepath=str(OUTPUT_BLEND))
     print(f"Created {PLANE_NAME} with {len(files)} eye sequence frames and {ARMATURE_NAME}.")
     print(f"Saved Blender file: {OUTPUT_BLEND}")
