@@ -150,10 +150,22 @@ def create_controller(frame_count):
         add_segment((x_left, TICK_Y, z), (x_left + TICK_HALF_WIDTH * 0.72, TICK_Y, z))
 
     ruler_mesh = bpy.data.meshes.new("Frame_Ruler_Mesh")
-    ruler_mesh.from_pydata(vertices, edges, [])
+    ruler_center = (
+        (x_left + x_right) * 0.5,
+        TICK_Y,
+        (z_min + z_max) * 0.5,
+    )
+    local_vertices = [
+        (x - ruler_center[0], y - ruler_center[1], z - ruler_center[2])
+        for x, y, z in vertices
+    ]
+    ruler_mesh.from_pydata(local_vertices, edges, [])
     ruler_mesh.update()
     ruler = bpy.data.objects.new("Frame_Ruler", ruler_mesh)
     bpy.context.collection.objects.link(ruler)
+    # The object origin is the frame's geometric center; mesh vertices above
+    # are stored relative to it, preserving the intended world placement.
+    ruler.location = ruler_center
     ruler.hide_render = True
     ruler.hide_select = True
     ruler.display_type = "WIRE"
@@ -178,8 +190,9 @@ def create_controller(frame_count):
     # The ruler border is the parent of every ruler component. Preserve their
     # world transforms while establishing the hierarchy.
     for child in ruler_children:
+        world_location = child.location.copy()
         child.parent = ruler
-        child.matrix_parent_inverse = ruler.matrix_world.inverted()
+        child.location = world_location - ruler.location
 
     # Parent the armature and complete ruler group to the image plane, keeping
     # their current world placement. This lets the full rig follow the plane.
