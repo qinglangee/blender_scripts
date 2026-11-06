@@ -101,7 +101,7 @@ def create_plane(image, frame_count, collection):
     texture.location = (-100, 0)
     texture.image = image
     texture.image_user.use_auto_refresh = True
-    texture.image_user.frame_duration = frame_count
+    texture.image_user.frame_duration = 1
     texture.image_user.frame_start = 1
     texture.image_user.frame_offset = 0
     texture.image_user.use_cyclic = True
